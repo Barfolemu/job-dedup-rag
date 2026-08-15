@@ -8,7 +8,6 @@ from job_dedup_rag.nodes import (
 )
 from job_dedup_rag.state import IngestionState
 
-
 manifest_path = Path("data/jobs/manifest.json")
 jobs = load_jobs_from_manifest(manifest_path)
 query_job = jobs[0]
@@ -30,10 +29,7 @@ state_with_document: IngestionState = {
 candidate_update = retrieve_candidates(state_with_document)
 candidates = candidate_update["candidates"]
 
-print(
-    f"Query job: {query_job['company_name']} — "
-    f"{query_job['role_title']}"
-)
+print(f"Query job: {query_job['company_name']} — {query_job['role_title']}")
 print(f"Candidates returned: {len(candidates)}")
 
 for position, candidate in enumerate(candidates, start=1):
@@ -48,16 +44,12 @@ for position, candidate in enumerate(candidates, start=1):
     print(f"   Job ID: {document.metadata['job_id']}")
     print(f"   Similarity score: {score:.4f}")
 
-scores = [
-    candidate["similarity_score"]
-    for candidate in candidates
-]
+scores = [candidate["similarity_score"] for candidate in candidates]
 
 assert len(candidates) <= 5
 assert scores == sorted(scores, reverse=True)
 assert all(
-    candidate["document"].metadata.get("job_id")
-    != query_job["job_id"]
+    candidate["document"].metadata.get("job_id") != query_job["job_id"]
     for candidate in candidates
 )
 assert set(candidate_update) == {

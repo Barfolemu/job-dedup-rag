@@ -1,18 +1,50 @@
 import os
 
+from dotenv import load_dotenv
 from langchain_core.documents import Document
-from job_dedup_rag.vector_store import build_vector_store
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+
+from job_dedup_rag.models import DuplicateComparison, ExtractedJobFeatures
 from job_dedup_rag.state import (
+    AlreadyExistsUpdate,
+    ExactIdCheckUpdate,
     IngestionState,
     PossibleDuplicateUpdate,
     RetrievalCandidate,
     RetrievalUpdate,
     StoredUpdate,
 )
-from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
-from job_dedup_rag.models import ExtractedJobFeatures, DuplicateComparison
+from job_dedup_rag.vector_store import (
+    build_vector_store,
+    job_id_exists,
+)
+
+
+def check_existing_job_id(
+    state: IngestionState,
+) -> ExactIdCheckUpdate:
+    job_id = state["job"]["job_id"]
+
+    return {
+        "exact_id_exists": job_id_exists(job_id),
+    }
+
+
+def mark_already_exists(
+    state: IngestionState,
+) -> AlreadyExistsUpdate:
+    if state.get("exact_id_exists") is not True:
+        raise ValueError(
+            "Cannot mark a job as already existing when its exact ID was not found"
+        )
+
+    job_id = state["job"]["job_id"]
+
+    return {
+        "matched_job_id": job_id,
+        "result_status": "already_exists",
+    }
 
 
 def create_document(state: IngestionState) -> dict[str, Document]:
@@ -74,6 +106,7 @@ def store_document(
         "result_status": "stored",
     }
 
+
 def retrieve_candidates(
     state: IngestionState,
 ) -> RetrievalUpdate:
@@ -89,7 +122,7 @@ def retrieve_candidates(
     candidates: list[RetrievalCandidate] = []
 
     ranked_results = sorted(
-       results,
+        results,
         key=lambda result: result[1],
         reverse=True,
     )
@@ -114,6 +147,7 @@ def retrieve_candidates(
         "candidates": candidates,
         "candidate_index": 0,
     }
+
 
 def extract_job_features(
     state: IngestionState,
@@ -157,11 +191,10 @@ def extract_job_features(
     extracted_features = structured_model.invoke(messages)
 
     if not isinstance(extracted_features, ExtractedJobFeatures):
-        raise TypeError(
-            "Structured model did not return ExtractedJobFeatures"
-        )
+        raise TypeError("Structured model did not return ExtractedJobFeatures")
 
     return {"extracted_features": extracted_features}
+
 
 def compare_current_candidate(
     state: IngestionState,
@@ -172,22 +205,16 @@ def compare_current_candidate(
     candidate_index = state.get("candidate_index", 0)
 
     if candidate_index >= len(candidates):
-        raise IndexError(
-            "Candidate index is outside the retrieved candidate list"
-        )
+        raise IndexError("Candidate index is outside the retrieved candidate list")
 
     new_job = state["job"]
     candidate = candidates[candidate_index]
     candidate_document = candidate["document"]
 
-    candidate_job_description = candidate_document.metadata.get(
-        "job_description"
-    )
+    candidate_job_description = candidate_document.metadata.get("job_description")
 
     if not isinstance(candidate_job_description, str):
-        raise ValueError(
-            "Candidate metadata does not contain a job description"
-        )
+        raise TypeError("Candidate metadata does not contain a job description")
 
     model_name = os.environ["OPENAI_CHAT_MODEL"]
     model = ChatOpenAI(model=model_name)
@@ -239,9 +266,7 @@ def compare_current_candidate(
     comparison = structured_model.invoke(messages)
 
     if not isinstance(comparison, DuplicateComparison):
-        raise TypeError(
-            "Structured model did not return DuplicateComparison"
-        )
+        raise TypeError("Structured model did not return DuplicateComparison")
 
     return {"comparison": comparison}
 
@@ -253,6 +278,7 @@ def advance_candidate(
     return {
         "candidate_index": state["candidate_index"] + 1,
     }
+
 
 def mark_possible_duplicate(
     state: IngestionState,
@@ -269,9 +295,7 @@ def mark_possible_duplicate(
     matched_job_id = matched_candidate["document"].metadata.get("job_id")
 
     if not isinstance(matched_job_id, str):
-        raise ValueError(
-            "Matched candidate metadata does not contain a valid job ID"
-        )
+        raise TypeError("Matched candidate metadata does not contain a valid job ID")
 
     return {
         "matched_job_id": matched_job_id,

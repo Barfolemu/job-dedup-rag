@@ -2,7 +2,6 @@ from job_dedup_rag.graph import build_ingestion_graph
 from job_dedup_rag.state import IngestionState
 from job_dedup_rag.vector_store import build_vector_store
 
-
 initial_state: IngestionState = {
     "job": {
         "job_id": "test:ingestion-graph",
@@ -30,8 +29,5 @@ print(f"Deleted test records: {result['stored_ids']}")
 
 assert result["result_status"] == "stored"
 assert result["stored_ids"] == ["test:ingestion-graph"]
-assert (
-    result["candidate_index"]
-    == len(result["candidates"]) - 1
-)
+assert result["candidate_index"] == len(result["candidates"]) - 1
 assert not result["comparison"].is_duplicate

@@ -2,10 +2,8 @@ from job_dedup_rag.models import ExtractedJobFeatures
 from job_dedup_rag.nodes import create_document
 from job_dedup_rag.state import IngestionState
 
-
 job_description = (
-    "Lead a software engineering team building cloud-native "
-    "applications on AWS."
+    "Lead a software engineering team building cloud-native applications on AWS."
 )
 
 features = ExtractedJobFeatures(

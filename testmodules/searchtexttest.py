@@ -1,6 +1,5 @@
 from job_dedup_rag.models import ExtractedJobFeatures
 
-
 features = ExtractedJobFeatures(
     company_name="Example Company",
     role_title="Software Engineering Manager",

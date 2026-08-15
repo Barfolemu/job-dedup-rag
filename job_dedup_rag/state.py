@@ -1,8 +1,8 @@
-from typing import NotRequired, TypedDict, Literal
+from typing import Literal, NotRequired, TypedDict
 
 from langchain_core.documents import Document
 
-from job_dedup_rag.models import ExtractedJobFeatures, DuplicateComparison
+from job_dedup_rag.models import DuplicateComparison, ExtractedJobFeatures
 
 
 class JobPosting(TypedDict):
@@ -22,9 +22,15 @@ class RetrievalUpdate(TypedDict):
     candidates: list[RetrievalCandidate]
     candidate_index: int
 
+
 class PossibleDuplicateUpdate(TypedDict):
     matched_job_id: str
     result_status: Literal["possible_duplicate"]
+
+
+class AlreadyExistsUpdate(TypedDict):
+    matched_job_id: str
+    result_status: Literal["already_exists"]
 
 
 class IngestionState(TypedDict):
@@ -35,14 +41,21 @@ class IngestionState(TypedDict):
     candidate_index: NotRequired[int]
     comparison: NotRequired[DuplicateComparison]
     matched_job_id: NotRequired[str]
+    exact_id_exists: NotRequired[bool]
     result_status: NotRequired[
         Literal[
+            "already_exists",
             "possible_duplicate",
             "stored",
         ]
     ]
     stored_ids: NotRequired[list[str]]
 
+
 class StoredUpdate(TypedDict):
     stored_ids: list[str]
     result_status: Literal["stored"]
+
+
+class ExactIdCheckUpdate(TypedDict):
+    exact_id_exists: bool

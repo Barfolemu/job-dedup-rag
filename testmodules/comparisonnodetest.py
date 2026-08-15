@@ -8,10 +8,7 @@ from job_dedup_rag.nodes import (
 )
 from job_dedup_rag.state import IngestionState
 
-
-query_path = Path(
-    "data/jobs/query_cases/affirm-indeed.txt"
-)
+query_path = Path("data/jobs/query_cases/affirm-indeed.txt")
 
 initial_state: IngestionState = {
     "job": {
@@ -38,9 +35,7 @@ state_with_candidates: IngestionState = {
     **retrieve_candidates(state_with_document),
 }
 
-comparison_update = compare_current_candidate(
-    state_with_candidates
-)
+comparison_update = compare_current_candidate(state_with_candidates)
 comparison = comparison_update["comparison"]
 
 candidate = state_with_candidates["candidates"][0]
@@ -56,21 +51,12 @@ print(
     f"{candidate_document.metadata['company_name']} — "
     f"{candidate_document.metadata['role_title']}"
 )
-print(
-    "Candidate ID: "
-    f"{candidate_document.metadata['job_id']}"
-)
-print(
-    "Vector score: "
-    f"{candidate['similarity_score']:.4f}\n"
-)
+print(f"Candidate ID: {candidate_document.metadata['job_id']}")
+print(f"Vector score: {candidate['similarity_score']:.4f}\n")
 
 print(comparison.model_dump_json(indent=2))
 
-assert (
-    candidate_document.metadata["job_id"]
-    == "linkedin:4413856088"
-)
+assert candidate_document.metadata["job_id"] == "linkedin:4413856088"
 assert comparison.is_duplicate is True
 assert len(comparison.matching_signals) > 0
 

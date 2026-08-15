@@ -6,6 +6,24 @@ from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
 
 
+def job_id_exists(job_id: str) -> bool:
+    load_dotenv(override=True)
+
+    api_key = os.environ["PINECONE_API_KEY"]
+    index_name = os.environ["PINECONE_INDEX_NAME"]
+    namespace = os.environ["PINECONE_NAMESPACE"]
+
+    pinecone = Pinecone(api_key=api_key)
+    index = pinecone.Index(index_name)
+
+    response = index.fetch(
+        ids=[job_id],
+        namespace=namespace,
+    )
+
+    return job_id in response.vectors
+
+
 def build_vector_store() -> PineconeVectorStore:
     load_dotenv(override=True)
 

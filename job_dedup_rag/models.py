@@ -9,9 +9,7 @@ class ExtractedJobFeatures(BaseModel):
     company_name: str | None = Field(
         description="Company offering the position, or null if unavailable"
     )
-    role_title: str | None = Field(
-        description="Job title, or null if unavailable"
-    )
+    role_title: str | None = Field(description="Job title, or null if unavailable")
     requisition_id: str | None = Field(
         description="Employer requisition or posting ID, or null if unavailable"
     )
@@ -23,9 +21,7 @@ class ExtractedJobFeatures(BaseModel):
         "hybrid",
         "onsite",
         "unspecified",
-    ] = Field(
-        description="Where the employee is expected to work"
-    )
+    ] = Field(description="Where the employee is expected to work")
     employment_type: Literal[
         "full_time",
         "part_time",
@@ -88,6 +84,7 @@ class ExtractedJobFeatures(BaseModel):
 
         return "\n\n".join(sections)
 
+
 class DuplicateComparison(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -100,23 +97,16 @@ class DuplicateComparison(BaseModel):
     confidence: float = Field(
         ge=0.0,
         le=1.0,
-        description=(
-            "Confidence in the duplicate decision, from 0.0 to 1.0"
-        ),
+        description=("Confidence in the duplicate decision, from 0.0 to 1.0"),
     )
     matching_signals: list[str] = Field(
-        description=(
-            "Specific facts supporting that the positions are the same"
-        )
+        description=("Specific facts supporting that the positions are the same")
     )
     differences: list[str] = Field(
-        description=(
-            "Meaningful differences between the two positions"
-        )
+        description=("Meaningful differences between the two positions")
     )
     explanation: str = Field(
         description=(
-            "Concise explanation of why the positions are or are not "
-            "duplicates"
+            "Concise explanation of why the positions are or are not duplicates"
         )
     )
