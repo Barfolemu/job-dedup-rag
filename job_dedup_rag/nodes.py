@@ -165,7 +165,10 @@ def extract_job_features(
     job = state["job"]
     model_name = os.environ["OPENAI_CHAT_MODEL"]
 
-    model = ChatOpenAI(model=model_name)
+    model = ChatOpenAI(
+        model=model_name,
+        max_retries=0,
+    )
     structured_model = model.with_structured_output(
         ExtractedJobFeatures,
         method="json_schema",
@@ -225,7 +228,10 @@ def compare_current_candidate(
         raise TypeError("Candidate metadata does not contain a job description")
 
     model_name = os.environ["OPENAI_CHAT_MODEL"]
-    model = ChatOpenAI(model=model_name)
+    model = ChatOpenAI(
+        model=model_name,
+        max_retries=0,
+    )
 
     structured_model = model.with_structured_output(
         DuplicateComparison,

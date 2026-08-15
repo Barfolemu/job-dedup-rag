@@ -34,7 +34,10 @@ def build_vector_store() -> PineconeVectorStore:
 
     pinecone = Pinecone(api_key=api_key)
     index = pinecone.Index(index_name)
-    embeddings = OpenAIEmbeddings(model=model_name)
+    embeddings = OpenAIEmbeddings(
+        model=model_name,
+        max_retries=0,
+    )
 
     return PineconeVectorStore(
         index=index,

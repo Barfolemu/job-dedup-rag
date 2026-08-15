@@ -13,6 +13,9 @@ from job_dedup_rag.nodes import (
     retrieve_candidates,
     store_document,
 )
+from job_dedup_rag.retry_policy import (
+    EXTERNAL_SERVICE_RETRY_POLICY,
+)
 from job_dedup_rag.state import IngestionState
 
 
@@ -22,13 +25,23 @@ def build_ingestion_graph():
     graph_builder.add_node(
         "extract_job_features",
         extract_job_features,
+        retry_policy=EXTERNAL_SERVICE_RETRY_POLICY,
     )
     graph_builder.add_node("create_document", create_document)
-    graph_builder.add_node("store_document", store_document)
-    graph_builder.add_node("retrieve_candidates", retrieve_candidates)
+    graph_builder.add_node(
+        "store_document",
+        store_document,
+        retry_policy=EXTERNAL_SERVICE_RETRY_POLICY,
+    )
+    graph_builder.add_node(
+        "retrieve_candidates",
+        retrieve_candidates,
+        retry_policy=EXTERNAL_SERVICE_RETRY_POLICY,
+    )
     graph_builder.add_node(
         "compare_current_candidate",
         compare_current_candidate,
+        retry_policy=EXTERNAL_SERVICE_RETRY_POLICY,
     )
     graph_builder.add_node(
         "advance_candidate",
@@ -41,6 +54,7 @@ def build_ingestion_graph():
     graph_builder.add_node(
         "check_existing_job_id",
         check_existing_job_id,
+        retry_policy=EXTERNAL_SERVICE_RETRY_POLICY,
     )
     graph_builder.add_node(
         "mark_already_exists",
