@@ -60,5 +60,10 @@ assert all(
     != query_job["job_id"]
     for candidate in candidates
 )
+assert set(candidate_update) == {
+    "candidates",
+    "candidate_index",
+}
+assert candidate_update["candidate_index"] == 0
 
 print("\nRetrieval node checks passed")

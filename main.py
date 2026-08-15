@@ -17,11 +17,24 @@ def main():
 
         result = graph.invoke(initial_state)
 
-        print(
-            f"Stored {job['job_id']}: "
-            f"{job['company_name']} — {job['role_title']}"
-        )
-        print(f"Pinecone IDs: {result['stored_ids']}")
+        result_status = result["result_status"]
+
+        if result_status == "possible_duplicate":
+            comparison = result["comparison"]
+
+            print(
+                f"Possible duplicate: "
+                f"{job['company_name']} — {job['role_title']}"
+            )
+            print(f"Matched job ID: {result['matched_job_id']}")
+            print(f"Confidence: {comparison.confidence:.2f}")
+            print(f"Explanation: {comparison.explanation}")
+        else:
+            print(
+                f"Stored {job['job_id']}: "
+                f"{job['company_name']} — {job['role_title']}"
+            )
+            print(f"Pinecone IDs: {result['stored_ids']}")
 
 
 if __name__ == "__main__":
