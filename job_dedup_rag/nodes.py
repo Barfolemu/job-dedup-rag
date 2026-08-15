@@ -1,4 +1,5 @@
 import os
+from time import time
 
 from dotenv import load_dotenv
 from langchain_core.documents import Document
@@ -19,6 +20,8 @@ from job_dedup_rag.vector_store import (
     build_vector_store,
     job_id_exists,
 )
+
+JOB_RETENTION_DAYS = 90
 
 
 def check_existing_job_id(
@@ -57,6 +60,9 @@ def create_document(state: IngestionState) -> dict[str, Document]:
     features = state["extracted_features"]
     search_text = features.to_search_text()
 
+    indexed_at_epoch = int(time())
+    expires_at_epoch = indexed_at_epoch + JOB_RETENTION_DAYS * 24 * 60 * 60
+
     metadata: dict[str, object] = {
         "job_id": job["job_id"],
         "company_name": job["company_name"],
@@ -66,6 +72,8 @@ def create_document(state: IngestionState) -> dict[str, Document]:
         "workplace_type": features.workplace_type,
         "employment_type": features.employment_type,
         "technologies": features.technologies,
+        "indexed_at_epoch": indexed_at_epoch,
+        "expires_at_epoch": expires_at_epoch,
     }
 
     if features.requisition_id is not None:
