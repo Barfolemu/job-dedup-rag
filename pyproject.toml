@@ -10,5 +10,6 @@ dependencies = [
     "langchain-pinecone>=0.2.13",
     "langgraph>=1.2.11",
     "pinecone>=7.3.0",
+    "pydantic>=2.13.4",
     "python-dotenv>=1.2.2",
 ]

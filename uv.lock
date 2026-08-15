@@ -577,6 +577,7 @@ dependencies = [
     { name = "langchain-pinecone" },
     { name = "langgraph" },
     { name = "pinecone" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
 ]
 
@@ -587,6 +588,7 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = ">=0.2.13" },
     { name = "langgraph", specifier = ">=1.2.11" },
     { name = "pinecone", specifier = ">=7.3.0" },
+    { name = "pydantic", specifier = ">=2.13.4" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
 ]
 

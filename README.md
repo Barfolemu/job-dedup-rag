@@ -1,191 +1,135 @@
 # Job Dedup RAG
 
-A small Python project for loading job postings, embedding their descriptions,
-and storing them in Pinecone so semantically similar postings can be retrieved.
-The ingestion workflow is orchestrated with LangGraph.
+An early-stage duplicate-detection pipeline for job postings collected from
+different sources. It uses LangGraph to orchestrate structured LLM extraction
+and retrieval-augmented generation (RAG), with the goal of recognizing the same
+role even when aggregators reformat or lightly rewrite the original posting.
 
-The project currently provides the ingestion and similarity-search foundation
-for job deduplication. It does **not** yet classify results as duplicates or
-apply a duplicate-score threshold automatically.
+## Milestone 2: structured retrieval
 
-## How it works
-
-Each entry in `data/jobs/manifest.json` points to a text file containing a job
-description. The application:
-
-1. Loads the manifest and corresponding description files.
-2. Converts each posting into a LangChain `Document`.
-3. Adds job metadata (`job_id`, company, role, and source) to the document.
-4. Creates an embedding with an OpenAI embedding model.
-5. Stores the vector and metadata in a Pinecone index using the job ID as the
-   vector ID.
-
-Using a stable job ID means ingesting the same source record again updates that
-ID rather than intentionally creating a second ID.
+Milestone 2 implements candidate retrieval:
 
 ```text
-manifest.json + job text files
-              |
-              v
-       load job postings
-              |
-              v
-   create LangChain Document
-              |
-              v
- OpenAI embedding -> Pinecone index
-              |
-              v
-      similarity retrieval
+JobPosting
+    -> structured LLM extraction (gpt-5.4-mini)
+    -> normalized search text
+    -> OpenAI embedding (text-embedding-3-small, 1536 dimensions)
+    -> Pinecone top-five retrieval (cosine similarity, structured-v1 namespace)
 ```
 
-## Requirements
+The extraction step converts each job description into typed identifying
+features: company, role, requisition ID, location, workplace and employment
+types, seniority, team/domain, responsibilities, qualifications, and
+technologies. Those fields become consistent search text before embedding,
+reducing noise caused by source-specific formatting.
 
-- Python 3.12 or newer
-- [`uv`](https://docs.astral.sh/uv/) (recommended for dependency management)
-- An OpenAI API key
-- A Pinecone API key and an existing Pinecone index
+The searchable Pinecone document contains the normalized text. Its metadata
+retains the original job description and source fields so a later comparison
+stage can evaluate candidates against the complete JD rather than the compact
+retrieval representation.
 
-The Pinecone index dimension must match the output dimension of the configured
-OpenAI embedding model. Use the same embedding model for both ingestion and
-retrieval.
+The current LangGraph workflow is:
+
+```text
+extract_job_features -> create_document -> retrieve_candidates -> store_document
+```
+
+## Technology choices
+
+- Python 3.12+
+- LangGraph and LangChain
+- `gpt-5.4-mini` for schema-constrained feature extraction
+- `text-embedding-3-small` with 1536-dimensional vectors
+- Pinecone cosine-similarity index
+- Pinecone namespace `structured-v1`
+- Pydantic for the extracted feature schema
+
+The Pinecone index must already exist with 1536 dimensions and cosine as its
+distance metric.
 
 ## Setup
 
-Install the locked dependencies:
+Install the locked dependencies with [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
 ```
 
-Create a `.env` file in the repository root:
+Copy the supplied environment template and add your credentials:
+
+```bash
+cp .env.example .env
+```
 
 ```dotenv
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_EMBEDDING_MODEL=your-embedding-model
-PINECONE_API_KEY=your-pinecone-api-key
-PINECONE_INDEX_NAME=your-index-name
+OPENAI_API_KEY=
+OPENAI_CHAT_MODEL=gpt-5.4-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+
+PINECONE_API_KEY=
+PINECONE_INDEX_NAME=job-dedup-rag
+PINECONE_NAMESPACE=structured-v1
 ```
 
-The `.env` file is ignored by Git. Do not commit API keys.
+Both `.env` and `data/jobs/` are intentionally ignored by Git. The job-data
+directory contains real job descriptions and must remain local.
 
-## Input data
+## Run the workflow
 
-Place job-description text files in `data/jobs/` and describe them in
-`data/jobs/manifest.json`:
-
-```json
-[
-  {
-    "file": "123456.txt",
-    "job_id": "linkedin:123456",
-    "company_name": "Example Company",
-    "role_title": "Engineering Manager",
-    "found_by": "linkedin"
-  }
-]
-```
-
-The `file` value is resolved relative to the manifest. Each referenced file
-should contain the complete plain-text job description. The `data/jobs/`
-directory is ignored by Git because it is local test/input data.
-
-## Run ingestion
-
-Run commands from the repository root:
+Place a local `manifest.json` and its referenced JD text files under
+`data/jobs/`, then populate the retrieval index:
 
 ```bash
 uv run python main.py
 ```
 
-The program ingests every manifest entry and prints the Pinecone IDs returned
-for each stored posting. It does not delete those records afterward.
+Each manifest entry supplies `job_id`, `company_name`, `role_title`, `found_by`,
+and the filename containing the original description.
 
-## Retrieve similar postings
+## Development checks
 
-After ingestion, run the retrieval smoke test:
-
-```bash
-uv run python -m testmodules.retrievaltest
-```
-
-This uses the first manifest posting as a query and prints the five closest
-records returned by Pinecone. The meaning of the returned score depends on the
-metric configured for the Pinecone index; establish a duplicate threshold from
-representative labeled examples rather than assuming a universal cutoff.
-
-## Development test scripts
-
-The files under `testmodules/` are informal Python scripts for testing pieces of
-the project as it is developed. They are not a pytest suite and are not intended
-as a production test harness. Run them in module form from the repository root
-so imports resolve correctly:
+`testmodules/` contains focused Python scripts used during development, not a
+formal pytest suite. Run them from the repository root in module form:
 
 ```bash
-# Tests that do not call external APIs
+# Local transformation checks
 uv run python -m testmodules.fileloadertest
+uv run python -m testmodules.searchtexttest
 uv run python -m testmodules.documentnodetest
 
-# Tests that use the configured OpenAI or Pinecone services
-uv run python -m testmodules.pineconetest
+# OpenAI and Pinecone checks
+uv run python -m testmodules.extractionnodetest
 uv run python -m testmodules.embeddingtest
-uv run python -m testmodules.vectorstoretest
-uv run python -m testmodules.graphtest
 uv run python -m testmodules.retrievaltest
+uv run python -m testmodules.retrievalnodetest
+uv run python -m testmodules.graphtest
 ```
 
-`vectorstoretest` and `graphtest` create temporary test vectors and delete them
-at the end of a successful run. If either script exits before cleanup, remove
-the test vector manually before rerunning if needed.
+The milestone acceptance check uses an Indeed-style reformatted copy of an
+existing LinkedIn JD. It verifies that structured retrieval ranks the original
+LinkedIn posting first across sources and that its original JD is available in
+metadata:
 
-Avoid invoking package-dependent scripts as paths, for example
-`python testmodules/fileloadertest.py`; that can produce
-`ModuleNotFoundError: No module named 'job_dedup_rag'`. Use the `python -m ...`
-commands above instead.
-
-## Project layout
-
-```text
-.
-|-- main.py                       # Loads and ingests all manifest jobs
-|-- job_dedup_rag/
-|   |-- file_loader.py            # Reads manifest entries and text files
-|   |-- state.py                  # Typed job and graph state definitions
-|   |-- nodes.py                  # Document creation and storage nodes
-|   |-- graph.py                  # LangGraph ingestion workflow
-|   `-- vector_store.py           # OpenAI/Pinecone client construction
-|-- testmodules/                  # Informal scripts used during development
-|-- data/jobs/                    # Local manifest and descriptions
-|-- pyproject.toml                # Project metadata and dependencies
-`-- uv.lock                       # Locked dependency versions
+```bash
+uv run python -m testmodules.crosssourceduplicatetest
 ```
 
-## Troubleshooting
+Run `uv run python main.py` first so the `structured-v1` namespace contains the
+source postings.
 
-### `python: command not found` or missing packages
+## Current limitations
 
-Use `uv run python ...` so the command runs with the project environment. If
-using the virtual environment directly, run `.venv/bin/python` on Linux/macOS.
+- There is no final LLM duplicate comparison or duplicate classification yet.
+- The graph still stores every ingested job after candidate retrieval.
+- An exact-ID precheck is not implemented.
+- Candidate retrieval currently requests six results and experimentally filters
+  out a result with the same job ID before returning up to five candidates.
+  This same-ID filtering must be replaced with a proper invariant after the
+  exact-ID precheck is added; it is not production-ready deduplication logic.
+- JobTracker integration is not implemented.
 
-### Missing environment variable
+## Next milestone
 
-An error such as `KeyError: 'PINECONE_INDEX_NAME'` means the corresponding
-value is absent from `.env` or the process environment. Confirm all four setup
-variables are present.
-
-### Cannot connect to Pinecone or OpenAI
-
-DNS errors, connection timeouts, and `MaxRetryError` indicate that the process
-cannot reach the external API. Check network access, proxy/firewall settings,
-and service availability.
-
-### Pinecone dimension error
-
-The selected embedding model and Pinecone index must use the same vector
-dimension. Create a compatible index or change `OPENAI_EMBEDDING_MODEL` to the
-model used when the index was created.
-
-### Authentication or index-not-found error
-
-Verify the API key and confirm `PINECONE_INDEX_NAME` names an existing index in
-the project associated with that key.
+Add serial LLM comparison of the query job against the top five retrieved
+candidates. The comparison will inspect each candidate's original JD and exit
+early as soon as a duplicate is confirmed, avoiding unnecessary model calls.

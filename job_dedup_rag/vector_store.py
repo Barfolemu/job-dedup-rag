@@ -12,6 +12,7 @@ def build_vector_store() -> PineconeVectorStore:
     index_name = os.environ["PINECONE_INDEX_NAME"]
     model_name = os.environ["OPENAI_EMBEDDING_MODEL"]
     api_key = os.environ["PINECONE_API_KEY"]
+    namespace = os.environ["PINECONE_NAMESPACE"]
 
     pinecone = Pinecone(api_key=api_key)
     index = pinecone.Index(index_name)
@@ -20,4 +21,5 @@ def build_vector_store() -> PineconeVectorStore:
     return PineconeVectorStore(
         index=index,
         embedding=embeddings,
+        namespace=namespace,
     )
