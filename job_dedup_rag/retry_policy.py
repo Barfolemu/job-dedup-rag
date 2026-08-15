@@ -17,7 +17,7 @@ PINECONE_RETRYABLE_STATUS_CODES = {
 }
 
 
-def is_transient_external_error(
+def _is_direct_transient_external_error(
     error: Exception,
 ) -> bool:
 
@@ -41,6 +41,28 @@ def is_transient_external_error(
         return isinstance(status_code, int) and (
             status_code in PINECONE_RETRYABLE_STATUS_CODES or status_code >= 500
         )
+
+    return False
+
+
+def is_transient_external_error(
+    error: Exception,
+) -> bool:
+    current_error: BaseException | None = error
+    visited_error_ids: set[int] = set()
+
+    while isinstance(current_error, Exception):
+        current_error_id = id(current_error)
+
+        if current_error_id in visited_error_ids:
+            return False
+
+        visited_error_ids.add(current_error_id)
+
+        if _is_direct_transient_external_error(current_error):
+            return True
+
+        current_error = current_error.__cause__
 
     return False
 

@@ -6,6 +6,9 @@ from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from job_dedup_rag.exceptions import (
+    ExternalServiceOperationError,
+)
 from job_dedup_rag.models import DuplicateComparison, ExtractedJobFeatures
 from job_dedup_rag.state import (
     AlreadyExistsUpdate,
@@ -29,8 +32,16 @@ def check_existing_job_id(
 ) -> ExactIdCheckUpdate:
     job_id = state["job"]["job_id"]
 
+    try:
+        exact_id_exists = job_id_exists(job_id)
+    except Exception as error:
+        raise ExternalServiceOperationError(
+            operation="exact_id_check",
+            job_id=job_id,
+        ) from error
+
     return {
-        "exact_id_exists": job_id_exists(job_id),
+        "exact_id_exists": exact_id_exists,
     }
 
 
@@ -104,10 +115,16 @@ def store_document(
 
     vector_store = build_vector_store()
 
-    stored_ids = vector_store.add_documents(
-        documents=[document],
-        ids=[job_id],
-    )
+    try:
+        stored_ids = vector_store.add_documents(
+            documents=[document],
+            ids=[job_id],
+        )
+    except Exception as error:
+        raise ExternalServiceOperationError(
+            operation="document_storage",
+            job_id=job_id,
+        ) from error
 
     return {
         "stored_ids": stored_ids,
@@ -122,10 +139,16 @@ def retrieve_candidates(
     current_job_id = state["job"]["job_id"]
     vector_store = build_vector_store()
 
-    results = vector_store.similarity_search_with_score(
-        document.page_content,
-        k=5,
-    )
+    try:
+        results = vector_store.similarity_search_with_score(
+            document.page_content,
+            k=5,
+        )
+    except Exception as error:
+        raise ExternalServiceOperationError(
+            operation="candidate_retrieval",
+            job_id=current_job_id,
+        ) from error
 
     candidates: list[RetrievalCandidate] = []
 
@@ -199,7 +222,13 @@ def extract_job_features(
         ),
     ]
 
-    extracted_features = structured_model.invoke(messages)
+    try:
+        extracted_features = structured_model.invoke(messages)
+    except Exception as error:
+        raise ExternalServiceOperationError(
+            operation="feature_extraction",
+            job_id=job["job_id"],
+        ) from error
 
     if not isinstance(extracted_features, ExtractedJobFeatures):
         raise TypeError("Structured model did not return ExtractedJobFeatures")
@@ -277,7 +306,13 @@ def compare_current_candidate(
         ),
     ]
 
-    comparison = structured_model.invoke(messages)
+    try:
+        comparison = structured_model.invoke(messages)
+    except Exception as error:
+        raise ExternalServiceOperationError(
+            operation="candidate_comparison",
+            job_id=new_job["job_id"],
+        ) from error
 
     if not isinstance(comparison, DuplicateComparison):
         raise TypeError("Structured model did not return DuplicateComparison")
