@@ -27,3 +27,11 @@ vector_store = build_vector_store()
 vector_store.delete(ids=result["stored_ids"])
 
 print(f"Deleted test records: {result['stored_ids']}")
+
+assert result["result_status"] == "stored"
+assert result["stored_ids"] == ["test:ingestion-graph"]
+assert (
+    result["candidate_index"]
+    == len(result["candidates"]) - 1
+)
+assert not result["comparison"].is_duplicate

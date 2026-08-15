@@ -87,3 +87,36 @@ class ExtractedJobFeatures(BaseModel):
         ]
 
         return "\n\n".join(sections)
+
+class DuplicateComparison(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_duplicate: bool = Field(
+        description=(
+            "True only when the two job descriptions represent the same "
+            "underlying position, not merely similar roles"
+        )
+    )
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Confidence in the duplicate decision, from 0.0 to 1.0"
+        ),
+    )
+    matching_signals: list[str] = Field(
+        description=(
+            "Specific facts supporting that the positions are the same"
+        )
+    )
+    differences: list[str] = Field(
+        description=(
+            "Meaningful differences between the two positions"
+        )
+    )
+    explanation: str = Field(
+        description=(
+            "Concise explanation of why the positions are or are not "
+            "duplicates"
+        )
+    )
