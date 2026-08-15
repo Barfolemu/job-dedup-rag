@@ -116,7 +116,7 @@ def retrieve_candidates(
 
     results = vector_store.similarity_search_with_score(
         document.page_content,
-        k=6,
+        k=5,
     )
 
     candidates: list[RetrievalCandidate] = []
@@ -128,10 +128,13 @@ def retrieve_candidates(
     )
 
     for candidate_document, score in ranked_results:
-        # TODO(production): Replace this experimental self-filter with an
-        # invariant error after the exact-ID check node has been implemented.
-        if candidate_document.metadata.get("job_id") == current_job_id:
-            continue
+        candidate_job_id = candidate_document.metadata.get("job_id")
+
+        if candidate_job_id == current_job_id:
+            raise RuntimeError(
+                "Exact-ID invariant violated: semantic retrieval returned "
+                f"incoming job ID {current_job_id!r}"
+            )
 
         candidates.append(
             {
@@ -139,9 +142,6 @@ def retrieve_candidates(
                 "similarity_score": score,
             }
         )
-
-        if len(candidates) == 5:
-            break
 
     return {
         "candidates": candidates,
