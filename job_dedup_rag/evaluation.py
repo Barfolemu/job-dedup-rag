@@ -2,11 +2,22 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from job_dedup_rag.state import JobPosting
+
 EvaluationStatus = Literal[
     "already_exists",
     "possible_duplicate",
     "stored",
 ]
+
+
+class EvaluationCase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    case_id: str
+    job: JobPosting
+    expected_status: EvaluationStatus
+    expected_match_job_id: str | None = None
 
 
 class EvaluationObservation(BaseModel):
