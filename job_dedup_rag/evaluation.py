@@ -190,3 +190,22 @@ def summarize_evaluations(
             observation.estimated_cost_usd or 0.0 for observation in observations
         ),
     )
+
+
+EVALUATION_NAMESPACE_PREFIX = "evaluation-"
+
+
+def validate_evaluation_namespace(
+    namespace: str,
+) -> str:
+    normalized_namespace = namespace.strip()
+
+    if not normalized_namespace.startswith(EVALUATION_NAMESPACE_PREFIX):
+        raise ValueError(
+            f"Evaluation namespace must start with {EVALUATION_NAMESPACE_PREFIX!r}"
+        )
+
+    if normalized_namespace == EVALUATION_NAMESPACE_PREFIX:
+        raise ValueError("Evaluation namespace must include a unique suffix")
+
+    return normalized_namespace

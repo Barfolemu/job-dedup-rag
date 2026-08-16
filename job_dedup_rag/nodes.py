@@ -183,7 +183,7 @@ def retrieve_candidates(
 def extract_job_features(
     state: IngestionState,
 ) -> dict[str, ExtractedJobFeatures]:
-    load_dotenv(override=True)
+    load_dotenv()
 
     job = state["job"]
     model_name = os.environ["OPENAI_EXTRACTION_MODEL"]
@@ -252,7 +252,7 @@ def extract_job_features(
 def compare_current_candidate(
     state: IngestionState,
 ) -> dict[str, DuplicateComparison]:
-    load_dotenv(override=True)
+    load_dotenv()
 
     candidates = state["candidates"]
     candidate_index = state.get("candidate_index", 0)

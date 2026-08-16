@@ -1,6 +1,7 @@
 from job_dedup_rag.evaluation import (
     EvaluationObservation,
     summarize_evaluations,
+    validate_evaluation_namespace,
 )
 
 observations = [
@@ -131,3 +132,27 @@ print(
     summary.mean_comparison_count,
 )
 print("Evaluation summary checks passed")
+
+assert validate_evaluation_namespace("  evaluation-test-run  ") == "evaluation-test-run"
+
+unsafe_namespaces = [
+    "",
+    "structured-v1",
+    "production",
+    "evaluation-",
+]
+
+for unsafe_namespace in unsafe_namespaces:
+    try:
+        validate_evaluation_namespace(unsafe_namespace)
+    except ValueError as error:
+        print(
+            "Expected namespace error:",
+            error,
+        )
+    else:
+        raise AssertionError(
+            f"Unsafe evaluation namespace was accepted: {unsafe_namespace!r}"
+        )
+
+print("Evaluation namespace checks passed")

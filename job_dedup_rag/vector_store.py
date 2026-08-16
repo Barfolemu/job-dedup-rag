@@ -7,7 +7,7 @@ from pinecone import Pinecone
 
 
 def job_id_exists(job_id: str) -> bool:
-    load_dotenv(override=True)
+    load_dotenv()
 
     api_key = os.environ["PINECONE_API_KEY"]
     index_name = os.environ["PINECONE_INDEX_NAME"]
@@ -25,7 +25,7 @@ def job_id_exists(job_id: str) -> bool:
 
 
 def build_vector_store() -> PineconeVectorStore:
-    load_dotenv(override=True)
+    load_dotenv()
 
     index_name = os.environ["PINECONE_INDEX_NAME"]
     model_name = os.environ["OPENAI_EMBEDDING_MODEL"]
