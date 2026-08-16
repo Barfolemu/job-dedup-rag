@@ -94,6 +94,10 @@ assert summary.retrieval_hits_at_five == 1
 assert summary.retrieval_recall_at_five == 0.5
 assert summary.mean_candidate_rank == 2.0
 
+assert summary.matched_job_id_eligible_cases == 3
+assert summary.correct_matched_job_id_cases == 2
+assert summary.matched_job_id_accuracy == 2 / 3
+
 assert summary.mean_comparison_count == 2.6
 
 assert summary.false_positive_case_ids == ["unique-false-positive"]
@@ -125,6 +129,10 @@ unmeasured_summary = summarize_evaluations(
 assert unmeasured_summary.total_input_tokens is None
 assert unmeasured_summary.total_output_tokens is None
 assert unmeasured_summary.total_estimated_cost_usd is None
+
+assert unmeasured_summary.matched_job_id_eligible_cases == 0
+assert unmeasured_summary.correct_matched_job_id_cases == 0
+assert unmeasured_summary.matched_job_id_accuracy is None
 
 print("Status accuracy:", summary.status_accuracy)
 print(

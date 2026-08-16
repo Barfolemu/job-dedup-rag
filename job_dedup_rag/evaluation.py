@@ -72,6 +72,10 @@ class EvaluationSummary(BaseModel):
     retrieval_hits_at_five: int
     retrieval_recall_at_five: float | None
 
+    matched_job_id_eligible_cases: int
+    correct_matched_job_id_cases: int
+    matched_job_id_accuracy: float | None
+
     mean_candidate_rank: float | None
     mean_comparison_count: float
 
@@ -113,6 +117,8 @@ def summarize_evaluations(
     retrieval_eligible_cases = 0
     retrieval_hits_at_five = 0
     candidate_ranks: list[int] = []
+    matched_job_id_eligible_cases = 0
+    correct_matched_job_id_cases = 0
 
     false_positive_case_ids: list[str] = []
     false_negative_case_ids: list[str] = []
@@ -134,6 +140,12 @@ def summarize_evaluations(
             false_negative_case_ids.append(observation.case_id)
         else:
             true_negatives += 1
+
+        if observation.expected_match_job_id is not None:
+            matched_job_id_eligible_cases += 1
+
+            if observation.matched_job_id == observation.expected_match_job_id:
+                correct_matched_job_id_cases += 1
 
         if (
             observation.expected_status == "possible_duplicate"
@@ -167,6 +179,12 @@ def summarize_evaluations(
     retrieval_recall_at_five = (
         retrieval_hits_at_five / retrieval_eligible_cases
         if retrieval_eligible_cases
+        else None
+    )
+
+    matched_job_id_accuracy = (
+        correct_matched_job_id_cases / matched_job_id_eligible_cases
+        if matched_job_id_eligible_cases
         else None
     )
 
@@ -207,6 +225,9 @@ def summarize_evaluations(
         retrieval_eligible_cases=(retrieval_eligible_cases),
         retrieval_hits_at_five=(retrieval_hits_at_five),
         retrieval_recall_at_five=(retrieval_recall_at_five),
+        matched_job_id_eligible_cases=matched_job_id_eligible_cases,
+        correct_matched_job_id_cases=correct_matched_job_id_cases,
+        matched_job_id_accuracy=matched_job_id_accuracy,
         mean_candidate_rank=mean_candidate_rank,
         mean_comparison_count=(
             sum(observation.comparison_count for observation in observations)
