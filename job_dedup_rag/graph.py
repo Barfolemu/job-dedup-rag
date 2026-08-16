@@ -106,7 +106,17 @@ def build_ingestion_graph():
     graph_builder.add_edge("store_document", END)
     graph_builder.add_edge("mark_already_exists", END)
 
-    return graph_builder.compile()
+    compiled_graph = graph_builder.compile()
+
+    return compiled_graph.with_config(
+        {
+            "run_name": "job_dedup_ingestion",
+            "tags": [
+                "job-dedup",
+                "ingestion-workflow",
+            ],
+        }
+    )
 
 
 def route_after_retrieval(

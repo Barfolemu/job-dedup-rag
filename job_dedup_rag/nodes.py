@@ -223,7 +223,20 @@ def extract_job_features(
     ]
 
     try:
-        extracted_features = structured_model.invoke(messages)
+        extracted_features = structured_model.invoke(
+            messages,
+            config={
+                "run_name": "feature_extraction_model",
+                "tags": [
+                    "job-dedup",
+                    "feature-extraction",
+                ],
+                "metadata": {
+                    "job_id": job["job_id"],
+                    "model_name": model_name,
+                },
+            },
+        )
     except Exception as error:
         raise ExternalServiceOperationError(
             operation="feature_extraction",
@@ -307,7 +320,21 @@ def compare_current_candidate(
     ]
 
     try:
-        comparison = structured_model.invoke(messages)
+        comparison = structured_model.invoke(
+            messages,
+            config={
+                "run_name": "duplicate_comparison_model",
+                "tags": [
+                    "job-dedup",
+                    "duplicate-comparison",
+                ],
+                "metadata": {
+                    "job_id": new_job["job_id"],
+                    "candidate_index": candidate_index,
+                    "model_name": model_name,
+                },
+            },
+        )
     except Exception as error:
         raise ExternalServiceOperationError(
             operation="candidate_comparison",

@@ -85,8 +85,8 @@ PINECONE_API_KEY=
 PINECONE_INDEX_NAME=job-dedup-rag
 PINECONE_NAMESPACE=structured-v1
 
-# Optional LangSmith tracing (set to false to disable)
-LANGSMITH_TRACING=true
+# Optional LangSmith tracing
+LANGSMITH_TRACING=false
 LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 LANGSMITH_API_KEY=
 LANGSMITH_PROJECT=job-dedup-rag-development
@@ -95,9 +95,10 @@ LANGSMITH_PROJECT=job-dedup-rag-development
 Both `.env` and `data/jobs/` are intentionally ignored by Git. The job-data
 directory contains real job descriptions and must remain local.
 
-LangSmith tracing is optional. When enabled, prompts, job descriptions, and
-model outputs are sent to the configured LangSmith workspace. Leave tracing
-disabled if that workspace is not approved to receive the job-posting data.
+LangSmith tracing is disabled by default. When enabled, traces can include full
+job descriptions, prompts, candidate documents, extracted features, model
+outputs, and graph state. Enable tracing only in an approved development
+environment and follow the applicable data retention and privacy requirements.
 
 ## Run the workflow
 

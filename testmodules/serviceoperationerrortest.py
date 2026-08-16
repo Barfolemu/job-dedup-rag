@@ -22,7 +22,17 @@ class FakeServiceError(RuntimeError):
 
 
 class FakeStructuredModel:
-    def invoke(self, messages: object) -> object:
+    invocation_configs: ClassVar[list[dict[str, object]]] = []
+
+    def invoke(
+        self,
+        messages: object,
+        config: dict[str, object] | None = None,
+    ) -> object:
+        assert config is not None
+
+        self.invocation_configs.append(config)
+
         raise FakeServiceError("Simulated model failure")
 
 
@@ -201,4 +211,27 @@ assert FakeChatOpenAI.created_models == [
 print(
     "Configured models:",
     FakeChatOpenAI.created_models,
+)
+
+assert [config["run_name"] for config in FakeStructuredModel.invocation_configs] == [
+    "feature_extraction_model",
+    "duplicate_comparison_model",
+]
+
+extraction_metadata = FakeStructuredModel.invocation_configs[0]["metadata"]
+
+comparison_metadata = FakeStructuredModel.invocation_configs[1]["metadata"]
+
+assert isinstance(extraction_metadata, dict)
+assert isinstance(comparison_metadata, dict)
+
+assert extraction_metadata["model_name"] == ("test-extraction-model")
+
+assert comparison_metadata["model_name"] == ("test-comparison-model")
+
+assert comparison_metadata["candidate_index"] == 0
+
+print(
+    "Configured trace names:",
+    [config["run_name"] for config in (FakeStructuredModel.invocation_configs)],
 )
