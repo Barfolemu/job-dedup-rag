@@ -181,7 +181,7 @@ Seed the reference corpus:
 
 ```bash
 PINECONE_NAMESPACE=evaluation-m4-20260816 \
-uv run python -m job_dedup_rag.seed_evaluation
+uv run python -m evals.seed_evaluation
 ```
 
 The seed command intentionally writes three fixed-ID vectors. Repeated runs
@@ -191,7 +191,7 @@ Run the no-write synthetic evaluation:
 
 ```bash
 PINECONE_NAMESPACE=evaluation-m4-20260816 \
-uv run python -m job_dedup_rag.synthetic_evaluation
+uv run python -m evals.synthetic_evaluation
 ```
 
 ### Private evaluation
@@ -201,7 +201,7 @@ can test exact-ID and cross-source behavior against the private
 `structured-v1` corpus:
 
 ```bash
-uv run python -m job_dedup_rag.private_evaluation
+uv run python -m evals.private_evaluation
 ```
 
 The private evaluation runner also injects the no-write storage node.
@@ -234,26 +234,64 @@ Latest synthetic results:
 
 This is a small synthetic baseline, not evidence of production-level accuracy.
 
-## Development checks
+## Project structure
 
-`testmodules/` contains executable development checks rather than a formal
-pytest suite. Run them from the repository root using module syntax:
-
-```bash
-uv run python -m testmodules.evaluationmodeltest
-uv run python -m testmodules.evaluationrunnertest
-uv run python -m testmodules.evaluationstoragetest
-uv run python -m testmodules.exactidgraphtest
-uv run python -m testmodules.retrygraphtest
-uv run python -m testmodules.retrypolicytest
-uv run python -m testmodules.serviceoperationerrortest
+```text
+job_dedup_rag/    core domain package: graph, nodes, models, state, vector
+                  store, retry policy, exceptions, reusable evaluation models
+                  and metrics (evaluation.py), and the manifest loader used by
+                  production ingestion (file_loader.py)
+evals/            evaluation/seeding command entry points (seed_evaluation,
+                  synthetic_evaluation, private_evaluation, evaluation_runner)
+                  plus the evaluation-manifest loader they use
+tests/unit/       pytest, no network or credentials required, runs by default
+tests/live/       pytest, marked `live` — real OpenAI/Pinecone calls, opt-in;
+                  a subset additionally requires the private, gitignored
+                  data/jobs/ corpus and is skipped automatically without it;
+                  a further subset is also marked `mutating` (intentionally
+                  writes to and deletes from Pinecone) and refuses to run
+                  outside a guarded evaluation-* namespace
+evaluation_data/  public synthetic fixtures (seeds/, cases/, manifests)
+main.py           production ingestion entry point (private data, paid calls)
 ```
 
-Some checks use OpenAI or Pinecone and may incur cost. The focused
-different-company comparison regression check is:
+## Development checks
+
+`tests/` is a `pytest` suite, split into local and live tiers. Run the local
+suite (no credentials, no network, safe by default):
 
 ```bash
-uv run python -m testmodules.differentcompanycomparisontest
+uv run pytest
+```
+
+Live tests are marked `live` and excluded by default via `pyproject.toml`'s
+`addopts`. They make real OpenAI/Pinecone calls and may incur cost; a subset
+additionally requires the private `data/jobs/` corpus and self-skips when it's
+absent. Live tests are further split by whether they intentionally write:
+
+Live tests with no intentional writes (still real, paid API calls; the two
+tests that build the full graph inject a no-write storage node as a safety
+net so a failed assertion can't fall through to a real store):
+
+```bash
+uv run pytest tests/live -m "live and not mutating"
+```
+
+Explicitly mutating tests — write and delete a uniquely-ID'd record — using a
+guarded evaluation namespace. These refuse to run against `structured-v1`,
+the default/empty namespace, or any namespace that isn't prefixed
+`evaluation-`:
+
+```bash
+PINECONE_NAMESPACE=evaluation-live-tests \
+uv run pytest tests/live -m "live and mutating"
+```
+
+The focused different-company comparison regression check (public data only,
+no writes) is:
+
+```bash
+uv run pytest tests/live/test_different_company_comparison.py -m live
 ```
 
 Standard static validation:
@@ -262,7 +300,7 @@ Standard static validation:
 uv run ruff check --fix .
 uv run ruff format .
 uv run ruff check .
-uv run python -m compileall job_dedup_rag testmodules main.py
+uv run python -m compileall job_dedup_rag evals tests main.py
 git diff --check
 ```
 
