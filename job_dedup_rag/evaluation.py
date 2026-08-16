@@ -79,9 +79,9 @@ class EvaluationSummary(BaseModel):
     false_negative_case_ids: list[str]
 
     total_latency_seconds: float
-    total_input_tokens: int
-    total_output_tokens: int
-    total_estimated_cost_usd: float
+    total_input_tokens: int | None
+    total_output_tokens: int | None
+    total_estimated_cost_usd: float | None
 
 
 class EvaluationGraph(Protocol):
@@ -176,6 +176,24 @@ def summarize_evaluations(
 
     total_cases = len(observations)
 
+    input_token_values = [
+        observation.input_tokens
+        for observation in observations
+        if observation.input_tokens is not None
+    ]
+
+    output_token_values = [
+        observation.output_tokens
+        for observation in observations
+        if observation.output_tokens is not None
+    ]
+
+    estimated_cost_values = [
+        observation.estimated_cost_usd
+        for observation in observations
+        if observation.estimated_cost_usd is not None
+    ]
+
     return EvaluationSummary(
         total_cases=total_cases,
         correct_status_cases=correct_status_cases,
@@ -199,14 +217,10 @@ def summarize_evaluations(
         total_latency_seconds=sum(
             observation.latency_seconds for observation in observations
         ),
-        total_input_tokens=sum(
-            observation.input_tokens or 0 for observation in observations
-        ),
-        total_output_tokens=sum(
-            observation.output_tokens or 0 for observation in observations
-        ),
-        total_estimated_cost_usd=sum(
-            observation.estimated_cost_usd or 0.0 for observation in observations
+        total_input_tokens=(sum(input_token_values) if input_token_values else None),
+        total_output_tokens=(sum(output_token_values) if output_token_values else None),
+        total_estimated_cost_usd=(
+            sum(estimated_cost_values) if estimated_cost_values else None
         ),
     )
 

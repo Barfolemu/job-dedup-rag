@@ -110,6 +110,22 @@ assert (
     == 0.0125
 )
 
+unmeasured_summary = summarize_evaluations(
+    [
+        EvaluationObservation(
+            case_id="usage-not-collected",
+            expected_status="stored",
+            actual_status="stored",
+            comparison_count=0,
+            latency_seconds=0.1,
+        )
+    ]
+)
+
+assert unmeasured_summary.total_input_tokens is None
+assert unmeasured_summary.total_output_tokens is None
+assert unmeasured_summary.total_estimated_cost_usd is None
+
 print("Status accuracy:", summary.status_accuracy)
 print(
     "Duplicate precision:",
