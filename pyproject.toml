@@ -16,5 +16,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=8.4.2",
     "ruff>=0.16.3",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: requires OPENAI_API_KEY/PINECONE_API_KEY credentials, makes real network calls, and may incur real API cost",
+    "mutating: live test that intentionally writes to and deletes from Pinecone; requires a guarded evaluation-* PINECONE_NAMESPACE",
+]
+addopts = "-m 'not live'"

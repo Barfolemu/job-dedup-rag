@@ -181,7 +181,7 @@ Seed the reference corpus:
 
 ```bash
 PINECONE_NAMESPACE=evaluation-m4-20260816 \
-uv run python -m job_dedup_rag.seed_evaluation
+uv run python -m evals.seed_evaluation
 ```
 
 The seed command intentionally writes three fixed-ID vectors. Repeated runs
@@ -191,7 +191,7 @@ Run the no-write synthetic evaluation:
 
 ```bash
 PINECONE_NAMESPACE=evaluation-m4-20260816 \
-uv run python -m job_dedup_rag.synthetic_evaluation
+uv run python -m evals.synthetic_evaluation
 ```
 
 ### Private evaluation
@@ -201,7 +201,7 @@ can test exact-ID and cross-source behavior against the private
 `structured-v1` corpus:
 
 ```bash
-uv run python -m job_dedup_rag.private_evaluation
+uv run python -m evals.private_evaluation
 ```
 
 The private evaluation runner also injects the no-write storage node.
@@ -234,26 +234,144 @@ Latest synthetic results:
 
 This is a small synthetic baseline, not evidence of production-level accuracy.
 
-## Development checks
+## JobTracker integration boundary
 
-`testmodules/` contains executable development checks rather than a formal
-pytest suite. Run them from the repository root using module syntax:
+`job_dedup_rag/boundary.py` defines a stable, transport-agnostic seam so an
+external caller (JobTracker) can request deduplication without depending on
+LangGraph, Pinecone, or any internal graph state.
 
-```bash
-uv run python -m testmodules.evaluationmodeltest
-uv run python -m testmodules.evaluationrunnertest
-uv run python -m testmodules.evaluationstoragetest
-uv run python -m testmodules.exactidgraphtest
-uv run python -m testmodules.retrygraphtest
-uv run python -m testmodules.retrypolicytest
-uv run python -m testmodules.serviceoperationerrortest
+**Request/response contract:**
+
+```python
+class DeduplicationRequest(BaseModel):
+    job_id: str
+    company_name: str
+    role_title: str
+    found_by: str
+    job_description: str
+    # all five required, non-blank; extra fields rejected
+
+
+class DeduplicationResponse(BaseModel):
+    status: Literal["already_exists", "possible_duplicate", "stored"]
+    incoming_job_id: str
+    matched_job_id: str | None = None  # set only for already_exists/possible_duplicate
+    stored_ids: list[str] | None = None  # set only for stored
 ```
 
-Some checks use OpenAI or Pinecone and may incur cost. The focused
-different-company comparison regression check is:
+`DeduplicationResponse` validates that its fields match its `status`: a
+duplicate status without a `matched_job_id`, a `stored` status without
+`stored_ids`, or any status carrying both, all raise. This also means a
+malformed result coming out of the graph itself — not just a malformed
+request — fails loudly instead of producing an inconsistent response.
+Confidence and explanation are intentionally not exposed: only the
+`possible_duplicate` path produces a real comparison, so those fields can't be
+populated consistently across all three result paths.
+
+**Entry point:**
+
+```python
+from job_dedup_rag.boundary import DeduplicationRequest, deduplicate_job
+
+response = deduplicate_job(
+    DeduplicationRequest(
+        job_id="indeed:12345",
+        company_name="Example Company",
+        role_title="Engineering Manager",
+        found_by="indeed",
+        job_description="...",
+    )
+)
+```
+
+`deduplicate_job` is the one public function — it takes no `storage_node` or
+graph parameter. It always runs the real production graph topology (compiled
+once at import time and reused) against whatever `PINECONE_NAMESPACE` is
+configured. There is a module-private `_run_graph(request, graph)` seam used
+only by tests, so unit tests can inject a fake graph/invoker without ever
+touching real Pinecone or OpenAI.
+
+**JobTracker adapter:** `job_dedup_rag/integrations/jobtracker.py` defines
+`JobTrackerLikeItem`, a `Protocol` limited to the five fields deduplication
+actually needs (not JobTracker's full `JobItem` shape, which also has
+`status`, `job_url`, `date_found`, `date_posted`, `notes`), and
+`map_job_item_to_request()`. This module never imports
+`jobtracker.models.JobItem` — any object with those five string attributes
+satisfies the protocol structurally, so JobTracker's real `JobItem` works
+without this package depending on the JobTracker repo existing.
+
+**What this is not, yet:** no transport exists, and none is decided. For
+local integration, adding `job_dedup_rag` as a direct Python dependency (e.g.
+a `uv`/`pip` git or path dependency pointing at this repo) and importing
+`deduplicate_job` directly is sufficient — no HTTP endpoint, Lambda
+invocation, or queue needed. How production JobTracker would call this is a
+separate, open question: it could package this dependency into a Lambda
+(JobTracker's Gmail agent already has a working pattern for isolating heavy
+dependencies into their own Lambda Layer, which this could follow), or it
+could invoke a separately deployed RAG service instead. That production
+transport decision is intentionally out of scope here — this boundary only
+defines the contract a future integration would call.
+
+## Project structure
+
+```text
+job_dedup_rag/    core domain package: graph, nodes, models, state, vector
+                  store, retry policy, exceptions, reusable evaluation models
+                  and metrics (evaluation.py), the manifest loader used by
+                  production ingestion (file_loader.py), the JobTracker
+                  integration boundary (boundary.py), and the JobTracker
+                  adapter (integrations/jobtracker.py)
+evals/            evaluation/seeding command entry points (seed_evaluation,
+                  synthetic_evaluation, private_evaluation, evaluation_runner)
+                  plus the evaluation-manifest loader they use
+tests/unit/       pytest, no network or credentials required, runs by default
+tests/live/       pytest, marked `live` — real OpenAI/Pinecone calls, opt-in;
+                  a subset additionally requires the private, gitignored
+                  data/jobs/ corpus and is skipped automatically without it;
+                  a further subset is also marked `mutating` (intentionally
+                  writes to and deletes from Pinecone) and refuses to run
+                  outside a guarded evaluation-* namespace
+evaluation_data/  public synthetic fixtures (seeds/, cases/, manifests)
+main.py           production ingestion entry point (private data, paid calls)
+```
+
+## Development checks
+
+`tests/` is a `pytest` suite, split into local and live tiers. Run the local
+suite (no credentials, no network, safe by default):
 
 ```bash
-uv run python -m testmodules.differentcompanycomparisontest
+uv run pytest
+```
+
+Live tests are marked `live` and excluded by default via `pyproject.toml`'s
+`addopts`. They make real OpenAI/Pinecone calls and may incur cost; a subset
+additionally requires the private `data/jobs/` corpus and self-skips when it's
+absent. Live tests are further split by whether they intentionally write:
+
+Live tests with no intentional writes (still real, paid API calls; the two
+tests that build the full graph inject a no-write storage node as a safety
+net so a failed assertion can't fall through to a real store):
+
+```bash
+uv run pytest tests/live -m "live and not mutating"
+```
+
+Explicitly mutating tests — write and delete a uniquely-ID'd record — using a
+guarded evaluation namespace. These refuse to run against `structured-v1`,
+the default/empty namespace, or any namespace that isn't prefixed
+`evaluation-`:
+
+```bash
+PINECONE_NAMESPACE=evaluation-live-tests \
+uv run pytest tests/live -m "live and mutating"
+```
+
+The focused different-company comparison regression check (public data only,
+no writes) is:
+
+```bash
+uv run pytest tests/live/test_different_company_comparison.py -m live
 ```
 
 Standard static validation:
@@ -262,7 +380,7 @@ Standard static validation:
 uv run ruff check --fix .
 uv run ruff format .
 uv run ruff check .
-uv run python -m compileall job_dedup_rag testmodules main.py
+uv run python -m compileall job_dedup_rag evals tests main.py
 git diff --check
 ```
 
@@ -284,4 +402,5 @@ credentials, `.env`, or `data/jobs/` in public archives or commits.
 - Older private vectors have not been backfilled with retention metadata.
 - Company aliases and corporate relationships still require comparison-model
   judgment.
-- JobTracker integration is not implemented.
+- The JobTracker integration boundary (contract + adapter) exists, but no
+  transport is wired up — JobTracker does not call this package yet.

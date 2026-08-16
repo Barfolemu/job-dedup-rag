@@ -1,8 +1,9 @@
 from time import perf_counter
-from typing import Literal, Protocol
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from job_dedup_rag.graph import IngestionGraph
 from job_dedup_rag.state import IngestionState, JobPosting, StoredUpdate
 
 EvaluationStatus = Literal[
@@ -86,13 +87,6 @@ class EvaluationSummary(BaseModel):
     total_input_tokens: int | None
     total_output_tokens: int | None
     total_estimated_cost_usd: float | None
-
-
-class EvaluationGraph(Protocol):
-    def invoke(
-        self,
-        state: IngestionState,
-    ) -> IngestionState: ...
 
 
 DUPLICATE_STATUSES = {
@@ -256,7 +250,7 @@ def skip_document_storage(
 
 
 def run_evaluation_case(
-    graph: EvaluationGraph,
+    graph: IngestionGraph,
     evaluation_case: EvaluationCase,
 ) -> EvaluationObservation:
     started_at = perf_counter()
