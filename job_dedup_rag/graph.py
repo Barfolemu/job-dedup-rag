@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Literal
+from typing import Literal, Protocol
 
 from langgraph.graph import END, START, StateGraph
 
@@ -20,6 +20,18 @@ from job_dedup_rag.retry_policy import (
 from job_dedup_rag.state import IngestionState, StoredUpdate
 
 StorageNode = Callable[[IngestionState], StoredUpdate]
+
+
+class IngestionGraph(Protocol):
+    """Anything that can run the ingestion workflow: invoke(state) -> state.
+
+    Satisfied by the real compiled LangGraph graph, and by any fake/stub
+    graph used in tests. Not evaluation-specific — production code (e.g.
+    job_dedup_rag/boundary.py) depends on this instead of an
+    evaluation-named abstraction.
+    """
+
+    def invoke(self, state: IngestionState) -> IngestionState: ...
 
 
 def build_ingestion_graph(

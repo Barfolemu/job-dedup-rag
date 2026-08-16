@@ -234,13 +234,93 @@ Latest synthetic results:
 
 This is a small synthetic baseline, not evidence of production-level accuracy.
 
+## JobTracker integration boundary
+
+`job_dedup_rag/boundary.py` defines a stable, transport-agnostic seam so an
+external caller (JobTracker) can request deduplication without depending on
+LangGraph, Pinecone, or any internal graph state.
+
+**Request/response contract:**
+
+```python
+class DeduplicationRequest(BaseModel):
+    job_id: str
+    company_name: str
+    role_title: str
+    found_by: str
+    job_description: str
+    # all five required, non-blank; extra fields rejected
+
+
+class DeduplicationResponse(BaseModel):
+    status: Literal["already_exists", "possible_duplicate", "stored"]
+    incoming_job_id: str
+    matched_job_id: str | None = None  # set only for already_exists/possible_duplicate
+    stored_ids: list[str] | None = None  # set only for stored
+```
+
+`DeduplicationResponse` validates that its fields match its `status`: a
+duplicate status without a `matched_job_id`, a `stored` status without
+`stored_ids`, or any status carrying both, all raise. This also means a
+malformed result coming out of the graph itself — not just a malformed
+request — fails loudly instead of producing an inconsistent response.
+Confidence and explanation are intentionally not exposed: only the
+`possible_duplicate` path produces a real comparison, so those fields can't be
+populated consistently across all three result paths.
+
+**Entry point:**
+
+```python
+from job_dedup_rag.boundary import DeduplicationRequest, deduplicate_job
+
+response = deduplicate_job(
+    DeduplicationRequest(
+        job_id="indeed:12345",
+        company_name="Example Company",
+        role_title="Engineering Manager",
+        found_by="indeed",
+        job_description="...",
+    )
+)
+```
+
+`deduplicate_job` is the one public function — it takes no `storage_node` or
+graph parameter. It always runs the real production graph topology (compiled
+once at import time and reused) against whatever `PINECONE_NAMESPACE` is
+configured. There is a module-private `_run_graph(request, graph)` seam used
+only by tests, so unit tests can inject a fake graph/invoker without ever
+touching real Pinecone or OpenAI.
+
+**JobTracker adapter:** `job_dedup_rag/integrations/jobtracker.py` defines
+`JobTrackerLikeItem`, a `Protocol` limited to the five fields deduplication
+actually needs (not JobTracker's full `JobItem` shape, which also has
+`status`, `job_url`, `date_found`, `date_posted`, `notes`), and
+`map_job_item_to_request()`. This module never imports
+`jobtracker.models.JobItem` — any object with those five string attributes
+satisfies the protocol structurally, so JobTracker's real `JobItem` works
+without this package depending on the JobTracker repo existing.
+
+**What this is not, yet:** no transport exists, and none is decided. For
+local integration, adding `job_dedup_rag` as a direct Python dependency (e.g.
+a `uv`/`pip` git or path dependency pointing at this repo) and importing
+`deduplicate_job` directly is sufficient — no HTTP endpoint, Lambda
+invocation, or queue needed. How production JobTracker would call this is a
+separate, open question: it could package this dependency into a Lambda
+(JobTracker's Gmail agent already has a working pattern for isolating heavy
+dependencies into their own Lambda Layer, which this could follow), or it
+could invoke a separately deployed RAG service instead. That production
+transport decision is intentionally out of scope here — this boundary only
+defines the contract a future integration would call.
+
 ## Project structure
 
 ```text
 job_dedup_rag/    core domain package: graph, nodes, models, state, vector
                   store, retry policy, exceptions, reusable evaluation models
-                  and metrics (evaluation.py), and the manifest loader used by
-                  production ingestion (file_loader.py)
+                  and metrics (evaluation.py), the manifest loader used by
+                  production ingestion (file_loader.py), the JobTracker
+                  integration boundary (boundary.py), and the JobTracker
+                  adapter (integrations/jobtracker.py)
 evals/            evaluation/seeding command entry points (seed_evaluation,
                   synthetic_evaluation, private_evaluation, evaluation_runner)
                   plus the evaluation-manifest loader they use
@@ -322,4 +402,5 @@ credentials, `.env`, or `data/jobs/` in public archives or commits.
 - Older private vectors have not been backfilled with retention metadata.
 - Company aliases and corporate relationships still require comparison-model
   judgment.
-- JobTracker integration is not implemented.
+- The JobTracker integration boundary (contract + adapter) exists, but no
+  transport is wired up — JobTracker does not call this package yet.
