@@ -1,0 +1,5 @@
+Blue Orbit Systems is hiring a Principal Platform Engineer for the Developer Platform team. This is a senior individual-contributor position with no direct reports.
+
+The engineer will design service templates, improve Kubernetes deployment tooling, establish observability patterns, write production infrastructure code, and mentor engineers through technical leadership. The role is expected to remain hands-on and will not own performance reviews, staffing, or people-management responsibilities.
+
+Candidates should have deep experience with AWS, Kubernetes, Python, infrastructure automation, continuous delivery, and developer portals. This is a remote full-time position in the United States.

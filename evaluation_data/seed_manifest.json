@@ -1,0 +1,23 @@
+[
+    {
+      "file": "seeds/blue-orbit-platform-manager.txt",
+      "job_id": "synthetic:blue-orbit-platform-manager-v1",
+      "company_name": "Blue Orbit Systems",
+      "role_title": "Engineering Manager, Developer Platform",
+      "found_by": "manual"
+    },
+    {
+      "file": "seeds/blue-orbit-payments-manager.txt",
+      "job_id": "synthetic:blue-orbit-payments-manager-v1",
+      "company_name": "Blue Orbit Systems",
+      "role_title": "Engineering Manager, Payments Processing",
+      "found_by": "manual"
+    },
+    {
+      "file": "seeds/redwood-platform-manager.txt",
+      "job_id": "synthetic:redwood-platform-manager-v1",
+      "company_name": "Redwood Analytics",
+      "role_title": "Engineering Manager, Cloud Platform",
+      "found_by": "manual"
+    }
+  ]

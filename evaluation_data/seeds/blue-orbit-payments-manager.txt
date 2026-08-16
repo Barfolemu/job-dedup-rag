@@ -1,0 +1,5 @@
+Blue Orbit Systems is hiring an Engineering Manager for its Payments Processing team. This manager will lead seven engineers building transaction authorization, payment ledger, reconciliation, fraud detection, and merchant settlement services.
+
+The role is responsible for reliable financial processing, PCI compliance, incident response, delivery planning, and coordination with finance and risk teams. The manager will guide the design of high-volume event-driven services while supporting and developing the engineering team.
+
+Candidates should have engineering management experience and knowledge of Java, Kafka, PostgreSQL, distributed systems, payment processing, and financial controls. This is a hybrid full-time role based in Chicago.

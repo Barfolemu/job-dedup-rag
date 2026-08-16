@@ -1,0 +1,5 @@
+Blue Orbit Systems is hiring an Engineering Manager for its Data Intelligence team. The manager will lead engineers building batch and streaming ingestion pipelines, analytical data models, governance controls, and self-service reporting infrastructure.
+
+Responsibilities include people management, data platform strategy, delivery planning, data quality, and partnership with analytics and product teams. The group works primarily with Python, Spark, Snowflake, dbt, Kafka, and data catalog systems.
+
+This is a remote full-time management role. Experience leading data engineering teams and operating large analytical platforms is required.
