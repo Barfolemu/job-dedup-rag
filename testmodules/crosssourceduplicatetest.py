@@ -7,10 +7,7 @@ from job_dedup_rag.nodes import (
 )
 from job_dedup_rag.state import IngestionState
 
-
-query_path = Path(
-    "data/jobs/query_cases/affirm-indeed.txt"
-)
+query_path = Path("data/jobs/query_cases/affirm-indeed.txt")
 
 initial_state: IngestionState = {
     "job": {
@@ -64,10 +61,7 @@ if not candidates:
 top_candidate = candidates[0]
 top_document = top_candidate["document"]
 
-scores = [
-    candidate["similarity_score"]
-    for candidate in candidates
-]
+scores = [candidate["similarity_score"] for candidate in candidates]
 
 assert scores == sorted(scores, reverse=True)
 

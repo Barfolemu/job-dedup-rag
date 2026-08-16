@@ -3,7 +3,6 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 
-
 load_dotenv()
 
 model_name = os.environ["OPENAI_EMBEDDING_MODEL"]

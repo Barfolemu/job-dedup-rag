@@ -6,7 +6,6 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
 
-
 load_dotenv()
 
 index_name = os.environ["PINECONE_INDEX_NAME"]

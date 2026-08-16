@@ -6,13 +6,12 @@ load_dotenv(override=True)
 
 from job_dedup_rag.graph import build_ingestion_graph
 
-
 graph = build_ingestion_graph()
 
 
-job_description = Path(
-    "data/jobs/query_cases/affirm-indeed.txt"
-).read_text(encoding="utf-8")
+job_description = Path("data/jobs/query_cases/affirm-indeed.txt").read_text(
+    encoding="utf-8"
+)
 
 initial_state = {
     "job": {

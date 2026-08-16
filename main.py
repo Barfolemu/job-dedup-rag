@@ -19,22 +19,29 @@ def main():
 
         result_status = result["result_status"]
 
-        if result_status == "possible_duplicate":
-            comparison = result["comparison"]
-
+        if result_status == "already_exists":
             print(
-                f"Possible duplicate: "
+                f"Already exists {job['job_id']}: "
                 f"{job['company_name']} — {job['role_title']}"
             )
+            print(f"Existing job ID: {result['matched_job_id']}")
+
+        elif result_status == "possible_duplicate":
+            comparison = result["comparison"]
+
+            print(f"Possible duplicate: {job['company_name']} — {job['role_title']}")
             print(f"Matched job ID: {result['matched_job_id']}")
             print(f"Confidence: {comparison.confidence:.2f}")
             print(f"Explanation: {comparison.explanation}")
-        else:
+
+        elif result_status == "stored":
             print(
-                f"Stored {job['job_id']}: "
-                f"{job['company_name']} — {job['role_title']}"
+                f"Stored {job['job_id']}: {job['company_name']} — {job['role_title']}"
             )
             print(f"Pinecone IDs: {result['stored_ids']}")
+
+        else:
+            raise ValueError(f"Unexpected ingestion result status: {result_status}")
 
 
 if __name__ == "__main__":

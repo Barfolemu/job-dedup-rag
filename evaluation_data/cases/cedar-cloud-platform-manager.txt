@@ -1,0 +1,5 @@
+Cedar Works is seeking an Engineering Manager for its Cloud Platform team. The team develops Kubernetes infrastructure, deployment automation, service templates, monitoring standards, and developer self-service tools.
+
+The manager will lead engineers, establish the technical roadmap, improve platform reliability, and partner with product teams to simplify cloud delivery. Candidates should have management experience and knowledge of AWS, Kubernetes, Terraform, continuous delivery, observability, and internal developer platforms.
+
+This is a remote full-time role in the United States.

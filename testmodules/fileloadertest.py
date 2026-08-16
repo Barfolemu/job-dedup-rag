@@ -2,7 +2,6 @@ from pathlib import Path
 
 from job_dedup_rag.file_loader import load_jobs_from_manifest
 
-
 manifest_path = Path("data/jobs/manifest.json")
 jobs = load_jobs_from_manifest(manifest_path)
 

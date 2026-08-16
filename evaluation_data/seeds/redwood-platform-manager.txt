@@ -1,0 +1,5 @@
+Redwood Analytics is hiring an Engineering Manager for its Cloud Platform group. The manager will lead a team responsible for Kubernetes clusters, deployment pipelines, infrastructure libraries, service monitoring, and developer self-service capabilities.
+
+Responsibilities include people leadership, platform strategy, operational reliability, roadmap planning, and collaboration with product engineering teams. The group is focused on making cloud delivery safer and faster across the company.
+
+Candidates should have experience managing engineers and working with AWS, Kubernetes, Terraform, continuous delivery, observability, and internal platforms. This is a remote full-time management role in the United States.

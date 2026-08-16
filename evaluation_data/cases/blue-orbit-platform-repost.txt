@@ -1,0 +1,5 @@
+Blue Orbit Systems seeks a Software Engineering Manager to lead the Developer Platform organization. The six-person team owns the company’s developer portal, reusable service scaffolding, Kubernetes delivery workflows, CI/CD automation, and common observability tooling.
+
+This leader will manage engineers, set technical direction, plan the platform roadmap, work with application teams, and improve the speed and reliability of production software delivery.
+
+Qualified candidates have engineering management experience and familiarity with AWS, Kubernetes, Python, deployment automation, developer tooling, and internal platforms. The position is full-time and remote within the United States.
