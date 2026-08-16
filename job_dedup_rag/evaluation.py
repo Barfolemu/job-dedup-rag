@@ -1,4 +1,5 @@
-from typing import Literal
+from time import perf_counter
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -81,6 +82,13 @@ class EvaluationSummary(BaseModel):
     total_input_tokens: int
     total_output_tokens: int
     total_estimated_cost_usd: float
+
+
+class EvaluationGraph(Protocol):
+    def invoke(
+        self,
+        state: IngestionState,
+    ) -> IngestionState: ...
 
 
 DUPLICATE_STATUSES = {
@@ -210,6 +218,70 @@ def skip_document_storage(
         "stored_ids": [],
         "result_status": "stored",
     }
+
+
+def run_evaluation_case(
+    graph: EvaluationGraph,
+    evaluation_case: EvaluationCase,
+) -> EvaluationObservation:
+    started_at = perf_counter()
+
+    result = graph.invoke(
+        {
+            "job": evaluation_case.job,
+        }
+    )
+
+    latency_seconds = perf_counter() - started_at
+
+    actual_status = result.get("result_status")
+
+    if actual_status not in {
+        "already_exists",
+        "possible_duplicate",
+        "stored",
+    }:
+        raise ValueError(
+            f"Evaluation case {evaluation_case.case_id!r} "
+            "did not produce a valid result status"
+        )
+
+    matched_job_id = result.get("matched_job_id")
+
+    if matched_job_id is not None and not isinstance(matched_job_id, str):
+        raise TypeError("Evaluation result contains an invalid matched job ID")
+
+    candidates = result.get("candidates", [])
+    retrieved_job_ids: list[str] = []
+
+    for candidate in candidates:
+        candidate_job_id = candidate["document"].metadata.get("job_id")
+
+        if isinstance(candidate_job_id, str):
+            retrieved_job_ids.append(candidate_job_id)
+
+    comparison_count = 0
+
+    if candidates:
+        candidate_index = result.get("candidate_index")
+
+        if not isinstance(candidate_index, int):
+            raise TypeError(
+                "Evaluation result with candidates requires a candidate index"
+            )
+
+        comparison_count = candidate_index + 1
+
+    return EvaluationObservation(
+        case_id=evaluation_case.case_id,
+        expected_status=evaluation_case.expected_status,
+        actual_status=actual_status,
+        expected_match_job_id=evaluation_case.expected_match_job_id,
+        matched_job_id=matched_job_id,
+        retrieved_job_ids=retrieved_job_ids,
+        comparison_count=comparison_count,
+        latency_seconds=latency_seconds,
+    )
 
 
 EVALUATION_NAMESPACE_PREFIX = "evaluation-"
