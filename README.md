@@ -77,7 +77,8 @@ cp .env.example .env
 
 ```dotenv
 OPENAI_API_KEY=
-OPENAI_CHAT_MODEL=gpt-5.4-mini
+OPENAI_EXTRACTION_MODEL=gpt-5.4-mini
+OPENAI_COMPARISON_MODEL=gpt-5.4-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
 PINECONE_API_KEY=

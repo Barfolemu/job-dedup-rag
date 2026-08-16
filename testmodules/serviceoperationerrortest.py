@@ -1,5 +1,6 @@
 import os
 from collections.abc import Callable
+from typing import ClassVar
 from unittest.mock import patch
 
 from langchain_core.documents import Document
@@ -26,8 +27,16 @@ class FakeStructuredModel:
 
 
 class FakeChatOpenAI:
+    created_models: ClassVar[list[str]] = []
+
     def __init__(self, **kwargs: object) -> None:
-        pass
+        model = kwargs.get("model")
+        max_retries = kwargs.get("max_retries")
+
+        assert isinstance(model, str)
+        assert max_retries == 0
+
+        self.created_models.append(model)
 
     def with_structured_output(
         self,
@@ -114,7 +123,14 @@ def assert_operation_error(
 with (
     patch.dict(
         os.environ,
-        {"OPENAI_CHAT_MODEL": "test-model"},
+        {
+            "OPENAI_EXTRACTION_MODEL": ("test-extraction-model"),
+            "OPENAI_COMPARISON_MODEL": ("test-comparison-model"),
+        },
+    ),
+    patch(
+        "job_dedup_rag.nodes.load_dotenv",
+        return_value=None,
     ),
     patch(
         "job_dedup_rag.nodes.ChatOpenAI",
@@ -176,3 +192,13 @@ else:
     raise AssertionError("Invalid candidate metadata should fail")
 
 print("Service operation error checks passed")
+
+assert FakeChatOpenAI.created_models == [
+    "test-extraction-model",
+    "test-comparison-model",
+]
+
+print(
+    "Configured models:",
+    FakeChatOpenAI.created_models,
+)

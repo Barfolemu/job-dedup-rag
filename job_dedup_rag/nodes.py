@@ -186,7 +186,7 @@ def extract_job_features(
     load_dotenv(override=True)
 
     job = state["job"]
-    model_name = os.environ["OPENAI_CHAT_MODEL"]
+    model_name = os.environ["OPENAI_EXTRACTION_MODEL"]
 
     model = ChatOpenAI(
         model=model_name,
@@ -256,7 +256,7 @@ def compare_current_candidate(
     if not isinstance(candidate_job_description, str):
         raise TypeError("Candidate metadata does not contain a job description")
 
-    model_name = os.environ["OPENAI_CHAT_MODEL"]
+    model_name = os.environ["OPENAI_COMPARISON_MODEL"]
     model = ChatOpenAI(
         model=model_name,
         max_retries=0,
