@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Literal
 
 from langgraph.graph import END, START, StateGraph
@@ -16,10 +17,15 @@ from job_dedup_rag.nodes import (
 from job_dedup_rag.retry_policy import (
     EXTERNAL_SERVICE_RETRY_POLICY,
 )
-from job_dedup_rag.state import IngestionState
+from job_dedup_rag.state import IngestionState, StoredUpdate
+
+StorageNode = Callable[[IngestionState], StoredUpdate]
 
 
-def build_ingestion_graph():
+def build_ingestion_graph(
+    *,
+    storage_node: StorageNode = store_document,
+):
     graph_builder = StateGraph(IngestionState)
 
     graph_builder.add_node(
@@ -30,7 +36,7 @@ def build_ingestion_graph():
     graph_builder.add_node("create_document", create_document)
     graph_builder.add_node(
         "store_document",
-        store_document,
+        storage_node,
         retry_policy=EXTERNAL_SERVICE_RETRY_POLICY,
     )
     graph_builder.add_node(

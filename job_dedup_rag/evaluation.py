@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from job_dedup_rag.state import JobPosting
+from job_dedup_rag.state import IngestionState, JobPosting, StoredUpdate
 
 EvaluationStatus = Literal[
     "already_exists",
@@ -201,6 +201,15 @@ def summarize_evaluations(
             observation.estimated_cost_usd or 0.0 for observation in observations
         ),
     )
+
+
+def skip_document_storage(
+    _state: IngestionState,
+) -> StoredUpdate:
+    return {
+        "stored_ids": [],
+        "result_status": "stored",
+    }
 
 
 EVALUATION_NAMESPACE_PREFIX = "evaluation-"
